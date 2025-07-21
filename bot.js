@@ -3,7 +3,18 @@ const cron = require('node-cron');
 const { Client, GatewayIntentBits, AttachmentBuilder } = require('discord.js');
 const { google } = require('googleapis');
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
+// Import ticket system
+const TicketSender = require('./sender.js');
+let ticketSender;
+
+const client = new Client({ 
+  intents: [
+    GatewayIntentBits.Guilds, 
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent
+  ] 
+});
 
 // Use GoogleAuth instead of JWT
 const auth = new google.auth.GoogleAuth({
@@ -381,9 +392,20 @@ client.once('ready', async () => {
   console.log(`📤 Export channel: ${EXPORT_CHANNELID}`);
   console.log(`⏰ Cron schedule: ${process.env.CRON_SCHEDULE}`);
   
-  // Remove or comment out the immediate run:
-  // await processSheetAndExport();
-
+  // Initialize the ticket sender system
+  try {
+    ticketSender = new TicketSender(client);
+    ticketSender.init();
+    console.log('🎫 Ticket system initialized successfully');
+    
+    // Log ticket system configuration
+    console.log(`🗂️ Ticket category: ${process.env.TICKET_CAT}`);
+    console.log(`⏰ Close hours: ${parseFloat(process.env.CLOSE_HOURS) || 1}`);
+    console.log(`🔧 Debug mode: ${process.env.DEBUG_MODE || 'false'}`);
+  } catch (error) {
+    console.error('❌ Failed to initialize ticket system:', error);
+  }
+  
   // Use cron schedule from .env
   cron.schedule(process.env.CRON_SCHEDULE, async () => {
     console.log('\n⏰ Scheduled run triggered...');
