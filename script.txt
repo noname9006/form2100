@@ -1,0 +1,122 @@
+function validateAndProcessFormResponses() {
+  Logger.log("Script started");
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sourceSheet = ss.getSheetByName("Form Responses 1");
+  const targetSheet = ss.getSheetByName("Processed");
+
+  // Log sheet status
+  Logger.log("Source sheet: " + (sourceSheet ? "Found" : "NOT FOUND"));
+  Logger.log("Target sheet: " + (targetSheet ? "Found" : "NOT FOUND"));
+
+  if (!sourceSheet) throw new Error("Source sheet 'Form Responses 1' not found.");
+  if (!targetSheet) throw new Error("Target sheet 'Processed' not found.");
+
+  const dataRange = sourceSheet.getDataRange();
+  const values = dataRange.getValues();
+  const backgrounds = dataRange.getBackgrounds();
+
+  Logger.log("Total rows in Form Responses 1: " + values.length);
+
+  const rowsToCopy = [];
+  const rowsToColorRed = [];
+  const white = "#ffffff".toLowerCase();
+  const lightGray = "#f8f9fa".toLowerCase();
+
+  // Start from i = 1 to skip header row
+  for (let i = 1; i < values.length; i++) {
+    const row = values[i];
+    const bgRow = backgrounds[i];
+
+    // Skip rows with non-white/light-gray background
+    const isAlreadyColored = bgRow.some(bg => {
+      const normalizedBg = bg.toLowerCase();
+      return normalizedBg !== white && normalizedBg !== lightGray;
+    });
+
+    if (isAlreadyColored) {
+      Logger.log(`Row ${i + 1} skipped: already colored`);
+      continue;
+    }
+
+    Logger.log(`Processing row ${i + 1}`);
+
+    const dCell = row[3]; // Column D
+    const eCell = row[4]; // Column E
+    const fCell = row[5]; // Column F
+    const tsCell = row[0]; // Column A
+
+    let hasError = false;
+
+    // Validate D: numeric only, 7–19 digits
+    const dValid = /^\d{7,19}$/.test(dCell?.toString());
+    if (!dValid) {
+      Logger.log(`Row ${i + 1}: Column D invalid - "${dCell}"`);
+      hasError = true;
+      rowsToColorRed.push({ row: i + 1, col: 4 }); // D column index 4
+    }
+
+    // Validate E: must be valid EVM address
+    const evmRegex = /^0x[a-fA-F0-9]{40}$/;
+    const eValid = evmRegex.test(eCell?.toString());
+    if (!eValid) {
+      Logger.log(`Row ${i + 1}: Column E invalid - "${eCell}"`);
+      hasError = true;
+      rowsToColorRed.push({ row: i + 1, col: 5 }); // E column index 5
+    }
+
+    // Validate F: must be exactly "I'm a human"
+    const fValid = fCell === "I'm a human";
+    if (!fValid) {
+      Logger.log(`Row ${i + 1}: Column F invalid - "${fCell}"`);
+      hasError = true;
+      rowsToColorRed.push({ row: i + 1, col: 6 }); // F column index 6
+    }
+
+    // If no errors, prepare to copy to Processed
+    if (!hasError) {
+      const utcTimestamp = convertUTCTimestamp(tsCell);
+      const newRow = [...row];
+      newRow[0] = utcTimestamp;
+      rowsToCopy.push(newRow);
+      sourceSheet.getRange(i + 1, 1, 1, row.length).setBackground("#D9E1F2"); // Mark as processed
+      Logger.log(`Row ${i + 1} validated and marked for copying`);
+    }
+  }
+
+  // Set invalid cells red
+  rowsToColorRed.forEach(({ row, col }) => {
+    sourceSheet.getRange(row, col).setBackground("red");
+  });
+
+  // Append valid rows to Processed sheet (clear formatting first)
+  if (rowsToCopy.length > 0) {
+  Logger.log(`Appending ${rowsToCopy.length} valid rows to 'Processed' sheet`);
+  const lastRow = targetSheet.getLastRow();
+  const targetRange = targetSheet.getRange(lastRow + 1, 1, rowsToCopy.length, rowsToCopy[0].length);
+
+  // 🔥 Clear ALL formatting (including conditional formatting)
+  targetRange.clear({ contentsOnly: false, formatOnly: true });
+
+  // 💡 Ensure formatting is flushed
+  SpreadsheetApp.flush();
+
+  // ✅ Paste only values
+  targetRange.setValues(rowsToCopy);
+} else {
+    Logger.log("No valid rows to copy to 'Processed'");
+  }
+
+  Logger.log("Script finished");
+}
+
+// Converts date from UTC+4 to UTC and formats as short date + time
+function convertUTCTimestamp(inputDate) {
+  if (!(inputDate instanceof Date)) return "";
+
+  // Assume input is in local time zone of the spreadsheet (UTC+4)
+  const adjustedTime = new Date(inputDate.getTime() - 4 * 60 * 60 * 1000); // subtract 4 hours
+
+  // Format using Utilities.formatDate
+  return Utilities.formatDate(adjustedTime, "UTC", "MM/dd/yyyy HH:mm");
+}
