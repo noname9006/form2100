@@ -467,6 +467,22 @@ class TicketSender {
                 command: '$close'
             });
             this.stats.ticketsClosed++;
+			const deleteTimeoutMs = this.DELETE_HOURS * 60 * 60 * 1000; // DELETE_HOURS in ms
+setTimeout(async () => {
+    try {
+        let channel = this.client.channels.cache.get(channelId);
+        if (!channel) {
+            channel = await this.client.channels.fetch(channelId).catch(() => null);
+            if (!channel) return;
+        }
+        await channel.send('$transcript');
+        setTimeout(async () => {
+            await channel.send('$delete');
+        }, 2000);
+    } catch (err) {
+        this.logError('Failed during transcript/delete sequence', err, { channelId });
+    }
+}, deleteTimeoutMs);
         } catch (error) {
             this.logError('Failed to close ticket', error, { channelId });
         } finally {

@@ -28,6 +28,7 @@ const SHEET_NAME = 'Processed';
 const ROLE_ID = process.env.ROLE_ID;
 const EXPORT_CHANNELID = process.env.EXPORT_CHANNELID;
 const ADD_TXT = process.env.ADD_TXT || '';
+const COMMAND = process.env.COMMAND || 'export';
 
 // Google Sheets color definitions
 const COLORS = {
@@ -383,6 +384,27 @@ async function processSheetAndExport() {
 
   console.log('\n✅ Sheet processing completed successfully!');
 }
+
+client.on('messageCreate', async (message) => {
+  if (
+    message.channel.id === EXPORT_CHANNELID &&
+    message.content.trim().toLowerCase() === `!${COMMAND.toLowerCase()}`
+  ) {
+    // Check admin permissions
+    if (message.member && message.member.permissions.has('Administrator')) {
+      await message.channel.send('⏳ Export process started by admin...');
+      try {
+        await processSheetAndExport();
+        await message.channel.send('✅ Export process finished!');
+      } catch (err) {
+        console.error(err);
+        await message.channel.send('❌ Export process failed!');
+      }
+    } else {
+      await message.reply('❌ Only server admins can use this command.');
+    }
+  }
+});
 
 client.once('ready', async () => {
   console.log(`🤖 Logged in as ${client.user.tag}`);

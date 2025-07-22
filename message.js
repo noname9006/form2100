@@ -5,15 +5,25 @@
 const messages = {
     INITIAL_MESSAGE: `{userTag}
 
-Tickets in this category are handled automatically
-Please paste your evm address, description and a screenshot displaying the issue`,
+📌 Automated Ticket Handling
+To resolve your issue quickly, please provide:
+1️⃣ Your EVM address (paste it here)
+2️⃣ Description of the issue (clear and concise)
+3️⃣ Screenshot displaying the problem
 
-    FORM_MESSAGE: `To get access to Mining SATs activity, fill out the google form:
-@https://docs.google.com/forms/d/e/1FAIpQLSfsEm1xSQe4XBg7epvnXk093EuJwUjr1J7NkE3WkftbB8yk0A/viewform
+⚠️ Missing details may delay resolution`,
 
-**Please note: you need to have Human role to get access to the activity. To get the role, use !human command and follow the instructions**
+    FORM_MESSAGE: `🔹 **How to Access Mining SATs Activity**
 
-The ticket will be automatically closed in one hour`
+Fill out the Google Form:
+→ [Mining SATs Access Form](https://docs.google.com/forms/d/e/1FAIpQLSfsEm1xSQe4XBg7epvnXk093EuJwUjr1J7NkE3WkftbB8yk0A/viewform)
+
+
+Requirement: You must have the **Human** role
+
+Don’t have it? Use **!human** command and follow the instructions
+
+⏳ *This ticket will auto-close in 1 hour*`
 };
 
 module.exports = messages;
