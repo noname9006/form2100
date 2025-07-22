@@ -435,18 +435,17 @@ class TicketSender {
     /**
      * Close ticket by executing /close slash command
      */
-    async closeTicket(channelId) {
+      async closeTicket(channelId) {
         const timer = this.startTimer('closeTicket');
-        
         try {
-            this.log('🔒 Starting ticket closure process via slash command', { channelId });
-            
-            const channel = this.client.channels.cache.get(channelId);
+            this.log('🔒 Starting ticket closure process by sending $close command', { channelId });
+
+            let channel = this.client.channels.cache.get(channelId);
             if (!channel) {
                 this.log('⚠️ Channel not found in cache, attempting to fetch', { channelId });
                 try {
-                    const fetchedChannel = await this.client.channels.fetch(channelId);
-                    if (!fetchedChannel) {
+                    channel = await this.client.channels.fetch(channelId);
+                    if (!channel) {
                         this.log('❌ Channel not found even after fetch', { channelId });
                         return;
                     }
@@ -455,30 +454,19 @@ class TicketSender {
                     return;
                 }
             }
-
-            // Execute /close slash command
-            const success = await this.executeCloseCommand(channel);
             
-            if (success) {
-                this.log('✅ Slash command executed successfully', {
-                    channelId,
-                    command: '/close'
-                });
-                
-                // Update statistics and tracking
-                this.activeTickets.delete(channelId);
-                this.pendingClosures.set(channelId, {
-                    closedAt: new Date(),
-                    method: 'slash_command',
-                    command: '/close'
-                });
-                this.stats.ticketsClosed++;
-                this.stats.slashCommandsExecuted++;
-            } else {
-                this.log('⚠️ Slash command execution failed, trying fallback', { channelId });
-                await this.fallbackCloseTicket(channelId, channel);
-            }
+            // Send $close command as a message
+            await channel.send('$close');
+            this.log('✅ $close command sent successfully', { channelId });
 
+            // Update statistics and tracking
+            this.activeTickets.delete(channelId);
+            this.pendingClosures.set(channelId, {
+                closedAt: new Date(),
+                method: 'message_command',
+                command: '$close'
+            });
+            this.stats.ticketsClosed++;
         } catch (error) {
             this.logError('Failed to close ticket', error, { channelId });
         } finally {
